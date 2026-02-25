@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -496,6 +497,14 @@ func (c *Conn) ReadPacket() (*Packet, int, error) {
 			pkt.Key = pkt.Key[idLen:]
 			pkt.CollectionID = collectionID
 		}
+	}
+
+	// CBG-4640 DEBUG: Log DCP packets as they arrive from the wire
+	switch pkt.Command {
+	case CmdDcpMutation, CmdDcpDeletion, CmdDcpExpiration, CmdDcpSeqNoAdvanced,
+		CmdDcpSnapshotMarker, CmdDcpStreamEnd, CmdDcpOsoSnapshot, CmdDcpEvent:
+		log.Printf("CBG-4640 DEBUG memd.ReadPacket: cmd=0x%x vbID=%d opaque=%d cas=%d datatype=%d keyLen=%d valueLen=%d collectionID=%d",
+			pkt.Command, pkt.Vbucket, pkt.Opaque, pkt.Cas, pkt.Datatype, len(pkt.Key), len(pkt.Value), pkt.CollectionID)
 	}
 
 	return pkt, 24 + int(bodyLen), nil

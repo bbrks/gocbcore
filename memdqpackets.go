@@ -235,10 +235,18 @@ func (req *memdQRequest) tryCallback(resp *memdQResponse, err error) {
 		if err != nil {
 			if req.internalCancel(err) {
 				req.Callback(resp, req, err)
+			} else {
+				logWarnf("CBG-4640 DEBUG tryCallback: DROPPING persistent request error callback - already completed. OP=0x%x Opaque=%d", req.Command, req.Opaque)
 			}
 		} else {
 			if atomic.LoadUint32(&req.isCompleted) == 0 {
 				req.Callback(resp, req, err)
+			} else {
+				if resp != nil {
+					logWarnf("CBG-4640 DEBUG tryCallback: DROPPING persistent event - isCompleted=1. OP=0x%x Opaque=%d vbID=%d keyLen=%d", resp.Command, resp.Opaque, resp.Vbucket, len(resp.Key))
+				} else {
+					logWarnf("CBG-4640 DEBUG tryCallback: DROPPING persistent event - isCompleted=1. OP=0x%x Opaque=%d (nil resp)", req.Command, req.Opaque)
+				}
 			}
 		}
 	} else {
