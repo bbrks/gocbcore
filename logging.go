@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"strings"
+
+	"github.com/couchbase/gocbcore/v10/memd"
 )
 
 // LogLevel specifies the severity of a log message.
@@ -140,6 +142,7 @@ func VerboseStdioLogger() Logger {
 // your own logger using the Logger interface.
 func SetLogger(logger Logger) {
 	globalLogger = logger
+	memd.SetLogInfof(logInfof)
 }
 
 type redactableLogValue interface {

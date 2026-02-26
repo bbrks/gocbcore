@@ -5,11 +5,18 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"log"
 	"sync"
 	"sync/atomic"
 	"time"
 )
+
+// SetLogInfof sets the info-level log function used by the memd package.
+// This allows the parent gocbcore package to wire up its logging infrastructure.
+func SetLogInfof(fn func(format string, v ...interface{})) {
+	logInfof = fn
+}
+
+var logInfof func(format string, v ...interface{})
 
 // writerBufPool - Thread safe pool containing packet write buffers i.e. they should be used to write a single packet to the
 // TCP socket.
@@ -500,11 +507,13 @@ func (c *Conn) ReadPacket() (*Packet, int, error) {
 	}
 
 	// CBG-4640 DEBUG: Log DCP packets as they arrive from the wire
-	switch pkt.Command {
-	case CmdDcpMutation, CmdDcpDeletion, CmdDcpExpiration, CmdDcpSeqNoAdvanced,
-		CmdDcpSnapshotMarker, CmdDcpStreamEnd, CmdDcpOsoSnapshot, CmdDcpEvent:
-		log.Printf("CBG-4640 DEBUG memd.ReadPacket: cmd=0x%x vbID=%d opaque=%d cas=%d datatype=%d keyLen=%d valueLen=%d collectionID=%d",
-			pkt.Command, pkt.Vbucket, pkt.Opaque, pkt.Cas, pkt.Datatype, len(pkt.Key), len(pkt.Value), pkt.CollectionID)
+	if logInfof != nil {
+		switch pkt.Command {
+		case CmdDcpMutation, CmdDcpDeletion, CmdDcpExpiration, CmdDcpSeqNoAdvanced,
+			CmdDcpSnapshotMarker, CmdDcpStreamEnd, CmdDcpOsoSnapshot, CmdDcpEvent:
+			logInfof("CBG-4640 DEBUG memd.ReadPacket: cmd=0x%x vbID=%d opaque=%d cas=%d datatype=%d keyLen=%d valueLen=%d collectionID=%d",
+				pkt.Command, pkt.Vbucket, pkt.Opaque, pkt.Cas, pkt.Datatype, len(pkt.Key), len(pkt.Value), pkt.CollectionID)
+		}
 	}
 
 	return pkt, 24 + int(bodyLen), nil

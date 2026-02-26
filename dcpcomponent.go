@@ -86,7 +86,7 @@ func (dcp *dcpComponent) OpenStream(vbID uint16, flags memd.DcpStreamAddFlag, vb
 		}
 
 		// This is one of the stream events
-		logWarnf("CBG-4640 DEBUG dcpComponent.handler: dispatching stream event OP=0x%x vbID=%d Opaque=%d keyLen=%d", resp.Command, resp.Vbucket, resp.Opaque, len(resp.Key))
+		logInfof("CBG-4640 DEBUG dcpComponent.handler: dispatching stream event OP=0x%x vbID=%d Opaque=%d keyLen=%d", resp.Command, resp.Vbucket, resp.Opaque, len(resp.Key))
 		switch resp.Command {
 		case memd.CmdDcpSnapshotMarker:
 			snapShotmarker := DcpSnapshotMarker{VbID: resp.Vbucket}
@@ -253,11 +253,11 @@ func (dcp *dcpComponent) OpenStream(vbID uint16, flags memd.DcpStreamAddFlag, vb
 			if resp.StreamIDFrame != nil {
 				end.StreamID = resp.StreamIDFrame.StreamID
 			}
-			logWarnf("CBG-4640 DEBUG dcpComponent.handler: StreamEnd vbID=%d code=%d", resp.Vbucket, code)
+			logInfof("CBG-4640 DEBUG dcpComponent.handler: StreamEnd vbID=%d code=%d", resp.Vbucket, code)
 			if req.internalCancel(err) {
 				evtHandler.End(end, getStreamEndStatusError(code))
 			} else {
-				logWarnf("CBG-4640 DEBUG dcpComponent.handler: StreamEnd vbID=%d SUPPRESSED - request already cancelled", resp.Vbucket)
+				logInfof("CBG-4640 DEBUG dcpComponent.handler: StreamEnd vbID=%d SUPPRESSED - request already cancelled", resp.Vbucket)
 			}
 		case memd.CmdDcpOsoSnapshot:
 			snapshot := DcpOSOSnapshot{
