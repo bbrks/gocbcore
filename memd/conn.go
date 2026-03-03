@@ -506,13 +506,17 @@ func (c *Conn) ReadPacket() (*Packet, int, error) {
 		}
 	}
 
-	// CBG-4640 DEBUG: Log DCP packets as they arrive from the wire
+	// CBG-4640 DEBUG: Log DCP packets as they arrive from the wire (only _sync prefix keys to reduce volume)
 	if logInfof != nil {
 		switch pkt.Command {
-		case CmdDcpMutation, CmdDcpDeletion, CmdDcpExpiration, CmdDcpSeqNoAdvanced,
-			CmdDcpSnapshotMarker, CmdDcpStreamEnd, CmdDcpOsoSnapshot, CmdDcpEvent:
-			logInfof("CBG-4640 DEBUG memd.ReadPacket: cmd=0x%x vbID=%d opaque=%d cas=%d datatype=%d keyLen=%d valueLen=%d collectionID=%d",
-				pkt.Command, pkt.Vbucket, pkt.Opaque, pkt.Cas, pkt.Datatype, len(pkt.Key), len(pkt.Value), pkt.CollectionID)
+		case CmdDcpMutation, CmdDcpDeletion, CmdDcpExpiration:
+			if bytes.HasPrefix(pkt.Key, []byte("_sync")) {
+				logInfof("CBG-4640 DEBUG memd.ReadPacket: cmd=0x%x vbID=%d opaque=%d cas=%d datatype=%d key=%s valueLen=%d collectionID=%d",
+					pkt.Command, pkt.Vbucket, pkt.Opaque, pkt.Cas, pkt.Datatype, pkt.Key, len(pkt.Value), pkt.CollectionID)
+			}
+		case CmdDcpSeqNoAdvanced, CmdDcpSnapshotMarker, CmdDcpStreamEnd, CmdDcpOsoSnapshot, CmdDcpEvent:
+			logInfof("CBG-4640 DEBUG memd.ReadPacket: cmd=0x%x vbID=%d opaque=%d cas=%d datatype=%d key=%s valueLen=%d collectionID=%d",
+				pkt.Command, pkt.Vbucket, pkt.Opaque, pkt.Cas, pkt.Datatype, pkt.Key, len(pkt.Value), pkt.CollectionID)
 		}
 	}
 

@@ -243,7 +243,7 @@ func (req *memdQRequest) tryCallback(resp *memdQResponse, err error) {
 				req.Callback(resp, req, err)
 			} else {
 				if resp != nil {
-					logInfof("CBG-4640 DEBUG tryCallback: DROPPING persistent event - isCompleted=1. OP=0x%x Opaque=%d vbID=%d keyLen=%d", resp.Command, resp.Opaque, resp.Vbucket, len(resp.Key))
+					logInfof("CBG-4640 DEBUG tryCallback: DROPPING persistent event - isCompleted=1. OP=0x%x Opaque=%d vbID=%d key=%s", resp.Command, resp.Opaque, resp.Vbucket, resp.Key)
 				} else {
 					logInfof("CBG-4640 DEBUG tryCallback: DROPPING persistent event - isCompleted=1. OP=0x%x Opaque=%d (nil resp)", req.Command, req.Opaque)
 				}
