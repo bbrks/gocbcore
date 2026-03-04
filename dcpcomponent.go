@@ -1,7 +1,6 @@
 package gocbcore
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -87,14 +86,6 @@ func (dcp *dcpComponent) OpenStream(vbID uint16, flags memd.DcpStreamAddFlag, vb
 		}
 
 		// This is one of the stream events
-		switch resp.Command {
-		case memd.CmdDcpMutation, memd.CmdDcpDeletion, memd.CmdDcpExpiration:
-			if bytes.HasPrefix(resp.Key, []byte("_sync")) {
-				logInfof("CBG-4640 DEBUG dcpComponent.handler: dispatching stream event OP=0x%x vbID=%d Opaque=%d key=%s", resp.Command, resp.Vbucket, resp.Opaque, resp.Key)
-			}
-		default:
-			logInfof("CBG-4640 DEBUG dcpComponent.handler: dispatching stream event OP=0x%x vbID=%d Opaque=%d key=%s", resp.Command, resp.Vbucket, resp.Opaque, resp.Key)
-		}
 		switch resp.Command {
 		case memd.CmdDcpSnapshotMarker:
 			snapShotmarker := DcpSnapshotMarker{VbID: resp.Vbucket}
@@ -261,11 +252,8 @@ func (dcp *dcpComponent) OpenStream(vbID uint16, flags memd.DcpStreamAddFlag, vb
 			if resp.StreamIDFrame != nil {
 				end.StreamID = resp.StreamIDFrame.StreamID
 			}
-			logInfof("CBG-4640 DEBUG dcpComponent.handler: StreamEnd vbID=%d code=%d", resp.Vbucket, code)
 			if req.internalCancel(err) {
 				evtHandler.End(end, getStreamEndStatusError(code))
-			} else {
-				logInfof("CBG-4640 DEBUG dcpComponent.handler: StreamEnd vbID=%d SUPPRESSED - request already cancelled", resp.Vbucket)
 			}
 		case memd.CmdDcpOsoSnapshot:
 			snapshot := DcpOSOSnapshot{
@@ -285,8 +273,6 @@ func (dcp *dcpComponent) OpenStream(vbID uint16, flags memd.DcpStreamAddFlag, vb
 				seqNoAdvanced.StreamID = resp.StreamIDFrame.StreamID
 			}
 			evtHandler.SeqNoAdvanced(seqNoAdvanced)
-		default:
-			logInfof("CBG-4640 DEBUG dcpComponent.handler: UNHANDLED stream event OP=0x%x vbID=%d Opaque=%d key=%s", resp.Command, resp.Vbucket, resp.Opaque, resp.Key)
 		}
 	}
 

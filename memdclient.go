@@ -1,7 +1,6 @@
 package gocbcore
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -388,7 +387,6 @@ func (client *memdClient) resolveRequest(resp *memdQResponse) {
 
 	if req == nil {
 		// There is no known request that goes with this response.  Ignore it.
-		logInfof("CBG-4640 DEBUG memdClient.resolveRequest: DROPPING event - no corresponding request in opMap. OP=0x%x Opaque=%d vbID=%d Status=%d key=%s", resp.Command, resp.Opaque, resp.Vbucket, resp.Status, resp.Key)
 		logDebugf("%s memdclient received response with no corresponding request. OP=0x%x. Opaque=%d. Status:%d", client.loggerID(), resp.Command, resp.Opaque, resp.Status)
 		if client.opTombstones == nil {
 			return
@@ -434,7 +432,6 @@ func (client *memdClient) resolveRequest(resp *memdQResponse) {
 			newValue, err := snappy.Decode(nil, resp.Value)
 			if err != nil {
 				req.processingLock.Unlock()
-				logInfof("CBG-4640 DEBUG memdClient.resolveRequest: DROPPING event - snappy decompression failed. OP=0x%x Opaque=%d vbID=%d key=%s err=%v", resp.Command, resp.Opaque, resp.Vbucket, req.Key, err)
 				logDebugf("%s memdclient failed to decompress value from the server for key `%s`.", client.loggerID(), req.Key)
 				return
 			}
@@ -497,18 +494,9 @@ func (client *memdClient) run() {
 			// closed then we'll flush the queue first.
 			q, stillOpen := <-dcpBufferQ
 			if !stillOpen || atomic.LoadUint32(&client.shutdownDCP) != 0 {
-				logInfof("CBG-4640 DEBUG memdClient.dcpProcessor: exiting - stillOpen=%v shutdownDCP=%d", stillOpen, atomic.LoadUint32(&client.shutdownDCP))
 				return
 			}
 
-			switch q.resp.Command {
-			case memd.CmdDcpMutation, memd.CmdDcpDeletion, memd.CmdDcpExpiration:
-				if bytes.HasPrefix(q.resp.Key, []byte("_sync")) {
-					logInfof("CBG-4640 DEBUG memdClient.dcpProcessor: dequeued OP=0x%x Opaque=%d vbID=%d key=%s", q.resp.Command, q.resp.Opaque, q.resp.Vbucket, q.resp.Key)
-				}
-			default:
-				logInfof("CBG-4640 DEBUG memdClient.dcpProcessor: dequeued OP=0x%x Opaque=%d vbID=%d key=%s", q.resp.Command, q.resp.Opaque, q.resp.Vbucket, q.resp.Key)
-			}
 			logSchedf("Resolving response OP=0x%x. Opaque=%d", q.resp.Command, q.resp.Opaque)
 			client.resolveRequest(q.resp)
 
@@ -586,14 +574,6 @@ func (client *memdClient) run() {
 			switch resp.Packet.Command {
 			case memd.CmdDcpDeletion, memd.CmdDcpExpiration, memd.CmdDcpMutation, memd.CmdDcpSnapshotMarker,
 				memd.CmdDcpEvent, memd.CmdDcpOsoSnapshot, memd.CmdDcpSeqNoAdvanced, memd.CmdDcpStreamEnd:
-				switch resp.Packet.Command {
-				case memd.CmdDcpMutation, memd.CmdDcpDeletion, memd.CmdDcpExpiration:
-					if bytes.HasPrefix(resp.Key, []byte("_sync")) {
-						logInfof("CBG-4640 DEBUG memdClient.readLoop: enqueuing DCP OP=0x%x Opaque=%d vbID=%d key=%s bufferQLen=%d/%d", resp.Command, resp.Opaque, resp.Vbucket, resp.Key, len(dcpBufferQ), cap(dcpBufferQ))
-					}
-				default:
-					logInfof("CBG-4640 DEBUG memdClient.readLoop: enqueuing DCP OP=0x%x Opaque=%d vbID=%d key=%s bufferQLen=%d/%d", resp.Command, resp.Opaque, resp.Vbucket, resp.Key, len(dcpBufferQ), cap(dcpBufferQ))
-				}
 				dcpBufferQ <- &dcpBuffer{
 					resp:      resp,
 					packetLen: n,
