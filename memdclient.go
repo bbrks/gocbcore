@@ -430,15 +430,17 @@ func (client *memdClient) resolveRequest(resp *memdQResponse) {
 	// We always want to decompress cluster configs if they've been compressed.
 	alwaysDecompress := req.Command == memd.CmdGetClusterConfig || resp.Status == memd.StatusNotMyVBucket
 	if isCompressed && (!client.disableDecompression || alwaysDecompress) {
-		newValue, err := snappy.Decode(nil, resp.Value)
-		if err != nil {
-			req.processingLock.Unlock()
-			logInfof("CBG-4640 DEBUG memdClient.resolveRequest: DROPPING event - snappy decompression failed. OP=0x%x Opaque=%d vbID=%d key=%s err=%v", resp.Command, resp.Opaque, resp.Vbucket, req.Key, err)
-			logDebugf("%s memdclient failed to decompress value from the server for key `%s`.", client.loggerID(), req.Key)
-			return
-		}
+		if len(resp.Value) > 0 {
+			newValue, err := snappy.Decode(nil, resp.Value)
+			if err != nil {
+				req.processingLock.Unlock()
+				logInfof("CBG-4640 DEBUG memdClient.resolveRequest: DROPPING event - snappy decompression failed. OP=0x%x Opaque=%d vbID=%d key=%s err=%v", resp.Command, resp.Opaque, resp.Vbucket, req.Key, err)
+				logDebugf("%s memdclient failed to decompress value from the server for key `%s`.", client.loggerID(), req.Key)
+				return
+			}
 
-		resp.Value = newValue
+			resp.Value = newValue
+		}
 		resp.Datatype = resp.Datatype & ^uint8(memd.DatatypeFlagCompressed)
 	}
 
