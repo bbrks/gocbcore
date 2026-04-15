@@ -439,7 +439,7 @@ func (client *memdClient) resolveRequest(resp *memdQResponse) {
 		newValue, err := snappy.Decode(nil, resp.Value)
 		if err != nil {
 			req.processingLock.Unlock()
-			logWarnf("%s memdclient failed to decompress value from the server for key `%s`.", client.loggerID(), req.Key)
+			logWarnf("%s memdclient failed to decompress value from the server for key `%s` (command `%s`, status `%s`, value: %v, DataType: `%b`) err: %v", client.loggerID(), req.Key, req.Command.Name(), resp.Status, resp.Value, resp.Datatype, err)
 			return
 		}
 
